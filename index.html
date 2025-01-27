@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Absen dengan Kamera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        video, canvas, img {
+            display: block;
+            margin: 10px auto;
+            width: 100%;
+            max-width: 300px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+        }
+        .location {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <form method="post" enctype="multipart/form-data">
+        <div class="container">
+            <h1>Form Absen</h1>
+            <div class="form-group">
+                <label for="petugas">Petugas:</label>
+                <select id="petugas" name="petugas">
+                    <option value="">---</option>
+                    <option value="Andi">Andi</option>
+                    <option value="Eko">Eko</option>
+                    <option value="Ferry">Ferry</option>
+                    <option value="Gary">Gary</option>
+                    <option value="Marhali">Marhali</option>
+                    <option value="Feri">Feri</option>
+                    <option value="Munadih">Munadih</option>
+                    <option value="Royani">Royani</option>
+                    <option value="Warga_ME">Warga</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pilih">Jenis Kegiatan:</label>
+                <select id="pilih" name="pilih">
+                    <option value="">---</option>
+                    <option value="Absen_Masuk">Absen Masuk</option>
+                    <option value="Absen_Pulang">Absen Pulang</option>
+                    <option value="Kegiatan">Kegiatan</option>
+                    <option value="Patroli">Patroli</option>
+                    <option value="Keluhan">Keluhan</option>
+                    <option value="Usulan">Usulan</option>
+                    <option value="lain2">Lain-Lain</option>
+                </select>
+            </div>
+            <video id="video" autoplay></video>
+            <button type="button" id="capture">Ambil Gambar</button>
+            <canvas id="canvas"></canvas>
+            <input type="hidden" id="imageData" name="imageData">
+            <div class="gps" id="gps">Lokasi GPS: Tidak tersedia</div>
+            <input type="hidden" id="gpsData" name="gpsData">
+            <button type="submit" name="submit">Submit</button>
+        </div>
+    </form>
+    
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const imageDataInput = document.getElementById('imageData');
+        const gpsInput = document.getElementById('gpsData');
+        const captureButton = document.getElementById('capture');
+        const context = canvas.getContext('2d');
+        const gpsDiv = document.getElementById('gps');
+
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((error) => {
+                console.error('Error accessing the camera:', error);
+                alert('Could not access the camera. Please check your permissions and try again.');
+            });
+
+        // Capture the image
+        captureButton.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/png'); // Convert canvas to image URL
+            capturedImage.src = imageData; // Set the image source to display
+        });
+
+        // Get GPS location
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    gpsDiv.textContent = `Lokasi GPS: Latitude ${latitude.toFixed(5)}, Longitude ${longitude.toFixed(5)}`;
+                },
+                (error) => {
+                    gpsDiv.textContent = 'Lokasi GPS: Tidak dapat diakses';
+                    console.error('Error getting location:', error);
+                }
+            );
+        } else {
+            gpsDiv.textContent = 'Lokasi GPS: Tidak didukung pada perangkat ini';
+        }
+    </script>
+</body>
+</html>
+
+
+<?php 
+$localhost = "localhost";
+$dbusername = "root";
+$dbpassword = "";
+$dbname = "absen";
+
+$conn = new mysqli($localhost, $dbusername, $dbpassword, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if (isset($_POST["submit"])) {
+    $petugas = $_POST["petugas"];
+    $pilih = $_POST["pilih"];
+    $imageData = $_POST["imageData"];
+    $gpsData = $_POST["gpsData"];
+
+    $sql = "INSERT INTO 'data' (petugas, pilih, canvas, gps) VALUES ('$petugas', '$pilih', '$imageData', '$gpsData')";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssss", $petugas, $pilih, $imageData, $gpsData);
+
+    if ($stmt->execute()) {
+        echo "Data berhasil disimpan.";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+$conn->close();
+?>
